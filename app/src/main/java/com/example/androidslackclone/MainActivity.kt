@@ -7,6 +7,7 @@ import android.support.v7.widget.LinearLayoutManager
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
 import android.widget.Toast
 import com.auth0.android.Auth0
 import com.auth0.android.authentication.AuthenticationAPIClient
@@ -16,6 +17,7 @@ import com.auth0.android.management.ManagementException
 import com.auth0.android.management.UsersAPIClient
 import com.auth0.android.result.UserProfile
 import com.pusher.chatkit.CurrentUser
+import com.pusher.chatkit.messages.Direction
 import com.pusher.chatkit.rooms.Room
 import com.pusher.chatkit.rooms.RoomSubscriptionEvent
 import com.pusher.platform.network.wait
@@ -120,25 +122,9 @@ class MainActivity : AppCompatActivity(), RoomsAdapter.RoomClickListener {
 			
 			for (room in roomsResult) {
 				if (room.name == "General") {
-					
 					Log.d("SlackClone", "There is a channel called General")
-					
-					SlackCloneApp.currentUser.subscribeToRoom(
-					  roomId = room.id,
-					  messageLimit = 10 // Optional, 10 by default
-					) { event ->
-						when (event) {
-							is RoomSubscriptionEvent.NewMessage -> {
-								chatAdapter.addItem(event.message)
-								Log.d("SlackClone", event.message.text)
-								
-							}
-							is RoomSubscriptionEvent.ErrorOccurred -> {
-								Log.d("SlackClone", event.error.reason)
-							}
-						}
-					}
-					
+					fetchMessages(room)
+					subscribeToRoom(room)
 				}
 			}
 			
@@ -160,6 +146,46 @@ class MainActivity : AppCompatActivity(), RoomsAdapter.RoomClickListener {
 			}
 			
 		}*/
+	}
+	
+	private fun subscribeToRoom(room: Room) {
+		
+		SlackCloneApp.currentUser.subscribeToRoom(
+			roomId = room.id,
+			messageLimit = 10 // Optional, 10 by default
+		) { event ->
+			when (event) {
+				is RoomSubscriptionEvent.NewMessage -> {
+					chatAdapter.addItem(event.message)
+					Log.d("SlackClone", event.message.text)
+					
+				}
+				is RoomSubscriptionEvent.ErrorOccurred -> {
+					Log.d("SlackClone", event.error.reason)
+				}
+			}
+		}
+		
+	}
+	
+	private fun fetchMessages(room: Room) {
+		
+		val messagesResult = SlackCloneApp.currentUser.fetchMessages(
+			room.id,
+			direction = Direction.OLDER_FIRST, // Optional, OLDER_FIRST by default
+			limit = 20 // Optional, 10 by default
+		).wait()
+		
+		when(messagesResult) {
+			is Result.Success -> {
+				chatAdapter.setList(messagesResult.value)
+				progressBarChat.visibility = View.GONE
+			}
+			is Result.Failure -> {
+				Log.d("SlackClone",messagesResult.error.reason)
+			}
+		}
+		
 	}
 	
 	
@@ -184,7 +210,8 @@ class MainActivity : AppCompatActivity(), RoomsAdapter.RoomClickListener {
 							Log.d("SlackClone", error.code)
 							Log.d("SlackClone", error.localizedMessage)
 							Log.d("SlackClone", error.stackTrace.toString())
-							runOnUiThread { Toast.makeText(this@MainActivity, "User Profile Request Failed", Toast.LENGTH_SHORT).show() }
+							runOnUiThread { Toast.makeText(this@MainActivity, "User Profile Request Failed",
+								Toast.LENGTH_SHORT).show() }
 						}
 					})
 			  }

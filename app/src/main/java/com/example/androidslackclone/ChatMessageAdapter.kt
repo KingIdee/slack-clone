@@ -31,6 +31,11 @@ class ChatMessageAdapter : RecyclerView.Adapter<ChatMessageAdapter.ViewHolder>()
 		notifyDataSetChanged()
 	}
 	
+	fun setList(items: List<Message>){
+		messageList = items as ArrayList<Message>
+		notifyDataSetChanged()
+	}
+	
 	inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
 		
 		private val userName: TextView = itemView.findViewById(R.id.userName)
