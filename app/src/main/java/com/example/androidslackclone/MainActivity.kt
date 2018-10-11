@@ -1,33 +1,43 @@
 package com.example.androidslackclone
 
+import android.content.Intent
 import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
+import android.support.v7.widget.LinearLayoutManager
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
-import kotlinx.android.synthetic.main.activity_main.*
-import android.content.Intent
-import android.util.Log
+import android.widget.Toast
+import com.auth0.android.Auth0
+import com.auth0.android.authentication.AuthenticationAPIClient
+import com.auth0.android.authentication.AuthenticationException
+import com.auth0.android.callback.BaseCallback
+import com.auth0.android.management.ManagementException
+import com.auth0.android.management.UsersAPIClient
+import com.auth0.android.result.UserProfile
 import com.pusher.chatkit.CurrentUser
+import com.pusher.chatkit.rooms.Room
+import com.pusher.chatkit.rooms.RoomSubscriptionConsumer
+import com.pusher.chatkit.rooms.RoomSubscriptionEvent
 import com.pusher.platform.network.wait
 import com.pusher.util.Result
 import elements.Error
-import android.widget.Toast
-import com.auth0.android.authentication.AuthenticationAPIClient
-import com.auth0.android.management.ManagementException
-import com.auth0.android.result.UserProfile
-import com.auth0.android.Auth0
-import com.auth0.android.authentication.AuthenticationException
-import com.auth0.android.callback.BaseCallback
-import com.auth0.android.management.UsersAPIClient
+import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.android.synthetic.main.app_bar_main.*
+import kotlinx.android.synthetic.main.content_main.*
 
 
-
-
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), RoomsAdapter.RoomClickListener {
+	
+	override fun onRoomClicked(item: Room) {
+		TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+	}
 	
 	
-	private lateinit var authenticationAPIClient : AuthenticationAPIClient
+	private lateinit var authenticationAPIClient: AuthenticationAPIClient
 	lateinit var usersClient: UsersAPIClient
+	private val mAdapter = RoomsAdapter(this)
+	private val chatAdapter = ChatMessageAdapter()
 	
 	
 	override fun onCreate(savedInstanceState: Bundle?) {
@@ -49,16 +59,29 @@ class MainActivity : AppCompatActivity() {
 		usersClient = UsersAPIClient(auth0, accessToken)
 		getProfile(accessToken)
 		
-		connectChatKit()
+		setupRecyclerView()
 		
+	}
+	
+	private fun setupRecyclerView() {
 		
+		with(recyclerViewRooms) {
+			layoutManager = LinearLayoutManager(this@MainActivity)
+			adapter = mAdapter
+		}
 		
-		
+		with(chatRecyclerView) {
+			layoutManager = LinearLayoutManager(this@MainActivity)
+			adapter = chatAdapter
+		}
 		
 	}
 	
 	private fun connectChatKit() {
-		SlackCloneApp.chatManager.connect().wait().let<Result<CurrentUser, Error>, Unit> { result ->
+		val result: Result<CurrentUser, Error>
+		
+		try {
+			result = SlackCloneApp.chatManager.connect().wait()
 			when (result) { // Result<CurrentUser, Error>
 				is Result.Success -> {
 					Log.d("Authentication", result.value.toString())
@@ -67,11 +90,60 @@ class MainActivity : AppCompatActivity() {
 				}
 				is Result.Failure -> Log.d("Authentication", result.error.toString())
 			}
+			
+		} catch (e: Exception) {
+			e.printStackTrace()
 		}
+		
 	}
 	
 	private fun loadRooms() {
-	
+		
+		val roomsResult = SlackCloneApp.currentUser.rooms
+		runOnUiThread {
+			
+			for (room in roomsResult) {
+				if (room.name == "General") {
+					
+					Log.d("SlackClone","There is a channel called General")
+					
+					SlackCloneApp.currentUser.subscribeToRoom(
+							roomId = room.id,
+							messageLimit = 10 // Optional, 10 by default
+					) { event ->
+						when (event) {
+							is RoomSubscriptionEvent.NewMessage -> {
+								chatAdapter.addItem(event.message)
+								Log.d("SlackClone",event.message.text)
+								
+							}
+							is RoomSubscriptionEvent.ErrorOccurred -> {
+								Log.d("SlackClone",event.error.reason)
+							}
+						}
+					}
+					
+				}
+			}
+			
+			mAdapter.setList(roomsResult as ArrayList<Room>)
+		}
+		/*when (roomsResult) {
+			
+			is Result.Success -> {
+				runOnUiThread {
+					Log.d("Tag",roomsResult.value.toString())
+					Log.d("Tag",roomsResult.value.size.toString())
+					mAdapter.setList(roomsResult.value as ArrayList<Room>)
+				}
+				
+			}
+			
+			is Result.Failure -> {
+			
+			}
+			
+		}*/
 	}
 	
 	
@@ -79,15 +151,23 @@ class MainActivity : AppCompatActivity() {
 		authenticationAPIClient.userInfo(accessToken)
 				.start(object : BaseCallback<UserProfile, AuthenticationException> {
 					override fun onSuccess(userinfo: UserProfile) {
+						Log.d("SlackClone", "First onSuccess called")
+						
 						usersClient.getProfile(userinfo.id)
 								.start(object : BaseCallback<UserProfile, ManagementException> {
 									override fun onSuccess(profile: UserProfile) {
+										Log.d("SlackClone", "Time to connect to ChatKit")
 										SlackCloneApp.userEmail = profile.email
+										connectChatKit()
 										/*userProfile = profile
 										runOnUiThread { refreshScreenInformation() }*/
 									}
 									
 									override fun onFailure(error: ManagementException) {
+										Log.d("SlackClone", error.message)
+										Log.d("SlackClone", error.code)
+										Log.d("SlackClone", error.localizedMessage)
+										Log.d("SlackClone", error.stackTrace.toString())
 										runOnUiThread { Toast.makeText(this@MainActivity, "User Profile Request Failed", Toast.LENGTH_SHORT).show() }
 									}
 								})

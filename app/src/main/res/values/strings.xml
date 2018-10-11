@@ -1,6 +1,12 @@
 <resources>
-  <string name="app_name">AndroidSlackClone</string>
-  <string name="action_settings">Settings</string>
-  <string name="com_auth0_client_id">ysyZWtSq1rAvU2kwQapIU40AErOTvfzE</string>
-  <string name="com_auth0_domain">idee.auth0.com</string>
+    <string name="app_name">AndroidSlackClone</string>
+    <string name="action_settings">Settings</string>
+    <string name="com_auth0_client_id">ysyZWtSq1rAvU2kwQapIU40AErOTvfzE</string>
+    <string name="com_auth0_domain">idee.auth0.com</string>
+    <string name="title_activity_main2">Main2Activity</string>
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
+    <string name="nav_header_title">Android Studio</string>
+    <string name="nav_header_subtitle">android.studio@android.com</string>
+    <string name="nav_header_desc">Navigation header</string>
 </resources>

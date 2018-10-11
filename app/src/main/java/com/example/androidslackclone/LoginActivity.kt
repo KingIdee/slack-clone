@@ -23,7 +23,7 @@ class LoginActivity : AppCompatActivity() {
 	
 	lateinit var auth0: Auth0
 	lateinit var credentialsManager: SecureCredentialsManager
-	val newActivityIntent = Intent(this@LoginActivity, MainActivity::class.java)
+	lateinit var newActivityIntent : Intent
 	
 	private val webCallback = object : AuthCallback {
 		override fun onFailure(dialog: Dialog) {
@@ -45,6 +45,8 @@ class LoginActivity : AppCompatActivity() {
 		super.onCreate(savedInstanceState)
 		//setContentView(R.layout.activity_login)
 		
+		newActivityIntent = Intent(this@LoginActivity, MainActivity::class.java)
+		
 		auth0 = Auth0(this)
 		auth0.isLoggingEnabled = true
 		auth0.isOIDCConformant = true
@@ -60,8 +62,8 @@ class LoginActivity : AppCompatActivity() {
 			//Make user login
 			WebAuthProvider.init(auth0)
 					.withScheme("demo")
-					.withAudience(String.format("https://%s/userinfo", getString(R.string.com_auth0_domain)))
-					.withScope("openid profile email offline_access")
+					.withAudience(String.format("https://%s/api/v2/", getString(R.string.com_auth0_domain)))
+					.withScope("openid profile email offline_access read:current_user update:current_user_metadata")
 					.start(this, webCallback)
 		} else {
 			credentialsManager.getCredentials(object : BaseCallback<Credentials, CredentialsManagerException> {

@@ -17,7 +17,8 @@ class SlackCloneApp : Application() {
 		lateinit var userEmail:String
 		lateinit var currentUser: CurrentUser
 		private const val INSTANCE_LOCATOR = "v1:us1:d530db18-2073-47fe-89d1-badf424f29a5"
-		private const val TOKEN_PROVIDER_ENDPOINT = "https://us1.pusherplatform.io/services/chatkit_token_provider/v1/$INSTANCE_LOCATOR/token"
+		private const val TOKEN_PROVIDER_ENDPOINT = "https://us1.pusherplatform.io/services/chatkit_token_provider/v1/d530db18-2073-47fe-89d1-badf424f29a5/token"
+		//private const val TOKEN_PROVIDER_ENDPOINT = "https://wt-25e341bb2fca3ab10c862fb71cda965c-0.sandbox.auth0-extend.com/slack-clone"
 
 		val chatManager: ChatManager by lazy {
 			ChatManager(instanceLocator = INSTANCE_LOCATOR, userId = userEmail,
