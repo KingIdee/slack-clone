@@ -17,7 +17,6 @@ import com.auth0.android.management.UsersAPIClient
 import com.auth0.android.result.UserProfile
 import com.pusher.chatkit.CurrentUser
 import com.pusher.chatkit.rooms.Room
-import com.pusher.chatkit.rooms.RoomSubscriptionConsumer
 import com.pusher.chatkit.rooms.RoomSubscriptionEvent
 import com.pusher.platform.network.wait
 import com.pusher.util.Result
@@ -60,6 +59,23 @@ class MainActivity : AppCompatActivity(), RoomsAdapter.RoomClickListener {
 		getProfile(accessToken)
 		
 		setupRecyclerView()
+		setupClickListeners()
+		
+	}
+	
+	private fun setupClickListeners() {
+		
+		sendMessage.setOnClickListener {
+			if (editTextMessage.text.isNotEmpty()){
+				val sendMessageResult = SlackCloneApp.currentUser.sendMessage(5,editTextMessage.text.toString()).wait()
+				when (sendMessageResult) { // Result<CurrentUser, Error>
+					is Result.Success -> {
+						Toast.makeText(this,"Message sending successful",Toast.LENGTH_SHORT).show()
+					}
+					is Result.Failure -> Log.d("SlackClone", sendMessageResult.error.toString())
+				}
+			}
+		}
 		
 	}
 	
@@ -105,20 +121,20 @@ class MainActivity : AppCompatActivity(), RoomsAdapter.RoomClickListener {
 			for (room in roomsResult) {
 				if (room.name == "General") {
 					
-					Log.d("SlackClone","There is a channel called General")
+					Log.d("SlackClone", "There is a channel called General")
 					
 					SlackCloneApp.currentUser.subscribeToRoom(
-							roomId = room.id,
-							messageLimit = 10 // Optional, 10 by default
+					  roomId = room.id,
+					  messageLimit = 10 // Optional, 10 by default
 					) { event ->
 						when (event) {
 							is RoomSubscriptionEvent.NewMessage -> {
 								chatAdapter.addItem(event.message)
-								Log.d("SlackClone",event.message.text)
+								Log.d("SlackClone", event.message.text)
 								
 							}
 							is RoomSubscriptionEvent.ErrorOccurred -> {
-								Log.d("SlackClone",event.error.reason)
+								Log.d("SlackClone", event.error.reason)
 							}
 						}
 					}
@@ -149,34 +165,37 @@ class MainActivity : AppCompatActivity(), RoomsAdapter.RoomClickListener {
 	
 	private fun getProfile(accessToken: String) {
 		authenticationAPIClient.userInfo(accessToken)
-				.start(object : BaseCallback<UserProfile, AuthenticationException> {
-					override fun onSuccess(userinfo: UserProfile) {
-						Log.d("SlackClone", "First onSuccess called")
+		  .start(object : BaseCallback<UserProfile, AuthenticationException> {
+			  override fun onSuccess(userinfo: UserProfile) {
+				  Log.d("SlackClone", "First onSuccess called")
+				  
+				  usersClient.getProfile(userinfo.id)
+					.start(object : BaseCallback<UserProfile, ManagementException> {
+						override fun onSuccess(profile: UserProfile) {
+							Log.d("SlackClone", "Time to connect to ChatKit")
+							SlackCloneApp.userEmail = profile.email
+							connectChatKit()
+							/*userProfile = profile
+							runOnUiThread { refreshScreenInformation() }*/
+						}
 						
-						usersClient.getProfile(userinfo.id)
-								.start(object : BaseCallback<UserProfile, ManagementException> {
-									override fun onSuccess(profile: UserProfile) {
-										Log.d("SlackClone", "Time to connect to ChatKit")
-										SlackCloneApp.userEmail = profile.email
-										connectChatKit()
-										/*userProfile = profile
-										runOnUiThread { refreshScreenInformation() }*/
-									}
-									
-									override fun onFailure(error: ManagementException) {
-										Log.d("SlackClone", error.message)
-										Log.d("SlackClone", error.code)
-										Log.d("SlackClone", error.localizedMessage)
-										Log.d("SlackClone", error.stackTrace.toString())
-										runOnUiThread { Toast.makeText(this@MainActivity, "User Profile Request Failed", Toast.LENGTH_SHORT).show() }
-									}
-								})
-					}
-					
-					override fun onFailure(error: AuthenticationException) {
-						runOnUiThread { Toast.makeText(this@MainActivity, "User Info Request Failed", Toast.LENGTH_SHORT).show() }
-					}
-				})
+						override fun onFailure(error: ManagementException) {
+							Log.d("SlackClone", error.message)
+							Log.d("SlackClone", error.code)
+							Log.d("SlackClone", error.localizedMessage)
+							Log.d("SlackClone", error.stackTrace.toString())
+							runOnUiThread { Toast.makeText(this@MainActivity, "User Profile Request Failed", Toast.LENGTH_SHORT).show() }
+						}
+					})
+			  }
+			  
+			  override fun onFailure(error: AuthenticationException) {
+					Log.d("SlackClone",error.message!!)
+					Log.d("SlackClone",error.description)
+					error.printStackTrace()
+					runOnUiThread { Toast.makeText(this@MainActivity, "User Info Request Failed", Toast.LENGTH_SHORT).show() }
+			  }
+		  })
 	}
 	
 	override fun onCreateOptionsMenu(menu: Menu): Boolean {
