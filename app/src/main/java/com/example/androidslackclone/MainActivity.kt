@@ -26,6 +26,13 @@ import elements.Error
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.app_bar_main.*
 import kotlinx.android.synthetic.main.content_main.*
+import okhttp3.OkHttpClient
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+import retrofit2.converter.scalars.ScalarsConverterFactory
 
 
 class MainActivity : AppCompatActivity(), RoomsAdapter.RoomClickListener {
@@ -39,6 +46,20 @@ class MainActivity : AppCompatActivity(), RoomsAdapter.RoomClickListener {
 	lateinit var usersClient: UsersAPIClient
 	private val mAdapter = RoomsAdapter(this)
 	private val chatAdapter = ChatMessageAdapter()
+	private val chatUserAdapter = ChatUserAdapter()
+	
+	private val slackCloneAPI:SlackCloneAPI by lazy {
+		Retrofit.Builder()
+			.baseUrl("https://wt-25e341bb2fca3ab10c862fb71cda965c-0.sandbox.auth0-extend.com/")
+			.addConverterFactory(ScalarsConverterFactory.create())
+			.addConverterFactory(GsonConverterFactory.create())
+			.client(OkHttpClient.Builder()
+				.build())
+			.build()
+			.create(SlackCloneAPI::class.java)
+	}
+	
+	
 	
 	
 	override fun onCreate(savedInstanceState: Bundle?) {
@@ -93,6 +114,11 @@ class MainActivity : AppCompatActivity(), RoomsAdapter.RoomClickListener {
 			adapter = chatAdapter
 		}
 		
+		with(recyclerViewMembers){
+			layoutManager = LinearLayoutManager(this@MainActivity)
+			adapter = chatUserAdapter
+		}
+		
 	}
 	
 	private fun connectChatKit() {
@@ -105,6 +131,7 @@ class MainActivity : AppCompatActivity(), RoomsAdapter.RoomClickListener {
 					Log.d("Authentication", result.value.toString())
 					SlackCloneApp.currentUser = result.value
 					loadRooms()
+					fetchUsers()
 				}
 				is Result.Failure -> Log.d("Authentication", result.error.toString())
 			}
@@ -123,8 +150,17 @@ class MainActivity : AppCompatActivity(), RoomsAdapter.RoomClickListener {
 			for (room in roomsResult) {
 				if (room.name == "General") {
 					Log.d("SlackClone", "There is a channel called General")
+					
+					/*if (SlackCloneApp.currentUser.isSubscribedToRoom(room)){
+						Log.d("SlackClone","User had subscribed before")
+						fetchMessages(room)
+					} else {
+						Log.d("SlackClone","New time subscription")
+						subscribeToRoom(room)
+					}*/
 					fetchMessages(room)
 					subscribeToRoom(room)
+					
 				}
 			}
 			
@@ -152,7 +188,7 @@ class MainActivity : AppCompatActivity(), RoomsAdapter.RoomClickListener {
 		
 		SlackCloneApp.currentUser.subscribeToRoom(
 			roomId = room.id,
-			messageLimit = 10 // Optional, 10 by default
+			messageLimit = 100 // Optional, 10 by default
 		) { event ->
 			when (event) {
 				is RoomSubscriptionEvent.NewMessage -> {
@@ -173,7 +209,7 @@ class MainActivity : AppCompatActivity(), RoomsAdapter.RoomClickListener {
 		val messagesResult = SlackCloneApp.currentUser.fetchMessages(
 			room.id,
 			direction = Direction.OLDER_FIRST, // Optional, OLDER_FIRST by default
-			limit = 20 // Optional, 10 by default
+			limit = 100 // Optional, 10 by default
 		).wait()
 		
 		when(messagesResult) {
@@ -188,6 +224,19 @@ class MainActivity : AppCompatActivity(), RoomsAdapter.RoomClickListener {
 		
 	}
 	
+	private fun fetchUsers(){
+		slackCloneAPI.getUsers().enqueue(object: Callback<List<ChatKitUser>> {
+			override fun onFailure(call: Call<List<ChatKitUser>>, t: Throwable) {
+				Log.d("SlackClone",t.message)
+			}
+			
+			override fun onResponse(call: Call<List<ChatKitUser>>, response: Response<List<ChatKitUser>>) {
+				Log.d("SlackClone",response.body().toString())
+				chatUserAdapter.setList(response.body()!!)
+			}
+			
+		})
+	}
 	
 	private fun getProfile(accessToken: String) {
 		authenticationAPIClient.userInfo(accessToken)

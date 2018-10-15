@@ -19,11 +19,30 @@
       android:layout_gravity="start"
       android:fitsSystemWindows="true" >
 
-    <android.support.v7.widget.RecyclerView
-        android:layout_marginTop="56dp"
-        android:layout_width="wrap_content"
-        android:id="@+id/recyclerViewRooms"
-        android:layout_height="wrap_content"/>
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+      <android.support.v7.widget.RecyclerView
+          android:layout_marginTop="56dp"
+          android:layout_width="wrap_content"
+          android:id="@+id/recyclerViewRooms"
+          android:layout_height="wrap_content"/>
+
+      <!--
+      horizontal line here
+      -->
+
+      <android.support.v7.widget.RecyclerView
+          android:layout_marginTop="56dp"
+          android:layout_width="wrap_content"
+          android:id="@+id/recyclerViewMembers"
+          android:layout_height="wrap_content"/>
+
+    </LinearLayout>
+
+
 
   </android.support.design.widget.NavigationView>
 

@@ -15,24 +15,24 @@ import com.pusher.chatkit.messages.Message
 
 class ChatMessageAdapter : RecyclerView.Adapter<ChatMessageAdapter.ViewHolder>() {
 	
-	private var messageList  = ArrayList<Message>()
+	val set: MutableSet<Message> = hashSetOf()
 	
 	override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
 		return ViewHolder(LayoutInflater.from(parent.context)
 				.inflate(R.layout.list_row_chat, parent, false))
 	}
 	
-	override fun onBindViewHolder(holder: ViewHolder, position: Int) = holder.bind(messageList[position])
+	override fun onBindViewHolder(holder: ViewHolder, position: Int) = holder.bind(set.elementAt(position))
 	
-	override fun getItemCount(): Int = messageList.size
+	override fun getItemCount(): Int = set.size
 	
 	fun addItem(item: Message){
-		messageList.add(item)
+		set.add(item)
 		notifyDataSetChanged()
 	}
 	
 	fun setList(items: List<Message>){
-		messageList = items as ArrayList<Message>
+		set.addAll(items)
 		notifyDataSetChanged()
 	}
 	
