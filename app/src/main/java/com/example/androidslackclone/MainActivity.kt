@@ -35,26 +35,21 @@ import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.converter.scalars.ScalarsConverterFactory
 
 
-class MainActivity : AppCompatActivity(), RoomsAdapter.RoomClickListener {
-	
-	override fun onRoomClicked(item: Room) {
-		TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-	}
-	
+class MainActivity : AppCompatActivity(), RoomsAdapter.RoomClickListener,
+	ChatUserAdapter.UserClickedListener {
 	
 	private lateinit var authenticationAPIClient: AuthenticationAPIClient
 	lateinit var usersClient: UsersAPIClient
 	private val mAdapter = RoomsAdapter(this)
 	private val chatAdapter = ChatMessageAdapter()
-	private val chatUserAdapter = ChatUserAdapter()
+	private val chatUserAdapter = ChatUserAdapter(this)
 	
 	private val slackCloneAPI:SlackCloneAPI by lazy {
 		Retrofit.Builder()
 			.baseUrl("https://wt-25e341bb2fca3ab10c862fb71cda965c-0.sandbox.auth0-extend.com/")
 			.addConverterFactory(ScalarsConverterFactory.create())
 			.addConverterFactory(GsonConverterFactory.create())
-			.client(OkHttpClient.Builder()
-				.build())
+			.client(OkHttpClient.Builder().build())
 			.build()
 			.create(SlackCloneAPI::class.java)
 	}
@@ -185,19 +180,21 @@ class MainActivity : AppCompatActivity(), RoomsAdapter.RoomClickListener {
 	}
 	
 	private fun subscribeToRoom(room: Room) {
-		
+		progressBarChat.visibility = View.VISIBLE
 		SlackCloneApp.currentUser.subscribeToRoom(
 			roomId = room.id,
 			messageLimit = 100 // Optional, 10 by default
 		) { event ->
 			when (event) {
 				is RoomSubscriptionEvent.NewMessage -> {
+					progressBarChat.visibility = View.GONE
 					chatAdapter.addItem(event.message)
 					Log.d("SlackClone", event.message.text)
-					
 				}
 				is RoomSubscriptionEvent.ErrorOccurred -> {
 					Log.d("SlackClone", event.error.reason)
+					Toast.makeText(this,"Error trying to subscribe to Room",
+						Toast.LENGTH_SHORT).show()
 				}
 			}
 		}
@@ -295,6 +292,41 @@ class MainActivity : AppCompatActivity(), RoomsAdapter.RoomClickListener {
 		intent.putExtra("clear_credentials", true)
 		startActivity(intent)
 		finish()
+	}
+	
+	override fun onUserClicked(user: ChatKitUser) {
+		
+		val privateRoomName = if (user.hashCode()>SlackCloneApp.currentUser.hashCode()){
+			user.id+"_"+SlackCloneApp.currentUser.id
+		} else {
+			SlackCloneApp.currentUser.id+"_"+user.id
+		}
+		
+		val memberList = ArrayList<String>()
+		memberList.add(user.id)
+		
+		val createRoomResult = SlackCloneApp.currentUser.createRoom(privateRoomName,true,memberList).wait()
+		
+		when(createRoomResult){
+			
+			is Result.Success -> {
+				Log.d("SlackClone",createRoomResult.value.name)
+				chatAdapter.clear()
+				subscribeToRoom(createRoomResult.value)
+				fetchMessages(createRoomResult.value)
+			}
+			is Result.Failure -> {
+				Log.d("SlackClone",createRoomResult.error.reason)
+			}
+		
+		}
+		
+	}
+	
+	override fun onRoomClicked(item: Room) {
+		chatAdapter.clear()
+		subscribeToRoom(item)
+		fetchMessages(item)
 	}
 	
 }

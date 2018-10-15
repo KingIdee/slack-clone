@@ -1,7 +1,6 @@
 package com.example.androidslackclone
 
 import android.support.v7.widget.RecyclerView
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -12,9 +11,9 @@ import android.widget.TextView
  *
  */
 
-class ChatUserAdapter : RecyclerView.Adapter<ChatUserAdapter.ViewHolder>() {
+class ChatUserAdapter (val listener:UserClickedListener ): RecyclerView.Adapter<ChatUserAdapter.ViewHolder>() {
 	
-	private val chatuserList: ArrayList<ChatKitUser> = ArrayList()
+	private val chatUserList: ArrayList<ChatKitUser> = ArrayList()
 	
 	override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
 		return ViewHolder(
@@ -22,29 +21,29 @@ class ChatUserAdapter : RecyclerView.Adapter<ChatUserAdapter.ViewHolder>() {
 				.inflate(android.R.layout.simple_list_item_1, parent, false))
 	}
 	
-	override fun onBindViewHolder(holder: ViewHolder, position: Int) = holder.bind(chatuserList.get(position))
+	override fun onBindViewHolder(holder: ViewHolder, position: Int) = holder.bind(chatUserList.get(position))
 	
-	override fun getItemCount(): Int = chatuserList.size
+	override fun getItemCount(): Int = chatUserList.size
 	
-	fun addItem(item: ChatKitUser){
-		chatuserList.add(item)
-		notifyDataSetChanged()
-	}
 	
 	fun setList(items: List<ChatKitUser>){
-		chatuserList.addAll(items)
+		chatUserList.addAll(items)
 		notifyDataSetChanged()
 	}
 	
 	inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
 		
 		private val userName: TextView = itemView.findViewById(android.R.id.text1)
-		private val userMessage: TextView = itemView.findViewById(R.id.userMessage)
 		
 		fun bind(item: ChatKitUser) = with(itemView) {
 			userName.text = item.name
+			itemView.setOnClickListener { listener.onUserClicked(item) }
 		}
 		
+	}
+	
+	interface UserClickedListener{
+		fun onUserClicked(user:ChatKitUser)
 	}
 	
 	
