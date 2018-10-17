@@ -18,7 +18,7 @@ class RoomsAdapter(val listener:RoomClickListener) : RecyclerView.Adapter<RoomsA
 	
 	override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
 		return ViewHolder(LayoutInflater.from(parent.context)
-				.inflate(R.layout.list_row_room, parent, false))
+				.inflate(android.R.layout.simple_list_item_1, parent, false))
 	}
 	
 	override fun onBindViewHolder(holder: ViewHolder, position: Int) = holder.bind(roomList[position])
@@ -37,7 +37,7 @@ class RoomsAdapter(val listener:RoomClickListener) : RecyclerView.Adapter<RoomsA
 	
 	inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
 		
-		private val roomName: TextView = itemView.findViewById(R.id.roomName)
+		private val roomName: TextView = itemView.findViewById(android.R.id.text1)
 		
 		fun bind(item: Room) = with(itemView) {
 			roomName.text = item.name

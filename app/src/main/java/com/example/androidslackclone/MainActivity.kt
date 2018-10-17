@@ -20,13 +20,18 @@ import com.pusher.chatkit.CurrentUser
 import com.pusher.chatkit.messages.Direction
 import com.pusher.chatkit.rooms.Room
 import com.pusher.chatkit.rooms.RoomSubscriptionEvent
+import com.pusher.chatkit.users.User
 import com.pusher.platform.network.wait
 import com.pusher.util.Result
 import elements.Error
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.app_bar_main.*
 import kotlinx.android.synthetic.main.content_main.*
+import okhttp3.MediaType
 import okhttp3.OkHttpClient
+import okhttp3.RequestBody
+import okhttp3.ResponseBody
+import org.json.JSONObject
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -38,11 +43,13 @@ import retrofit2.converter.scalars.ScalarsConverterFactory
 class MainActivity : AppCompatActivity(), RoomsAdapter.RoomClickListener,
 	ChatUserAdapter.UserClickedListener {
 	
+	
 	private lateinit var authenticationAPIClient: AuthenticationAPIClient
 	lateinit var usersClient: UsersAPIClient
 	private val mAdapter = RoomsAdapter(this)
 	private val chatAdapter = ChatMessageAdapter()
 	private val chatUserAdapter = ChatUserAdapter(this)
+	lateinit var currentRoom:Room
 	
 	private val slackCloneAPI:SlackCloneAPI by lazy {
 		Retrofit.Builder()
@@ -54,7 +61,9 @@ class MainActivity : AppCompatActivity(), RoomsAdapter.RoomClickListener,
 			.create(SlackCloneAPI::class.java)
 	}
 	
-	
+	companion object {
+		private const val MESSAGE_LIMIT = 100
+	}
 	
 	
 	override fun onCreate(savedInstanceState: Bundle?) {
@@ -85,10 +94,11 @@ class MainActivity : AppCompatActivity(), RoomsAdapter.RoomClickListener,
 		
 		sendMessage.setOnClickListener {
 			if (editTextMessage.text.isNotEmpty()){
-				val sendMessageResult = SlackCloneApp.currentUser.sendMessage(5,editTextMessage.text.toString()).wait()
+				val sendMessageResult = SlackCloneApp.currentUser.sendMessage(currentRoom.id,editTextMessage.text.toString()).wait()
 				when (sendMessageResult) { // Result<CurrentUser, Error>
 					is Result.Success -> {
-						Toast.makeText(this,"Message sending successful",Toast.LENGTH_SHORT).show()
+						editTextMessage.text.clear()
+						Toast.makeText(this,"Message sent",Toast.LENGTH_SHORT).show()
 					}
 					is Result.Failure -> Log.d("SlackClone", sendMessageResult.error.toString())
 				}
@@ -123,12 +133,28 @@ class MainActivity : AppCompatActivity(), RoomsAdapter.RoomClickListener,
 			result = SlackCloneApp.chatManager.connect().wait()
 			when (result) { // Result<CurrentUser, Error>
 				is Result.Success -> {
-					Log.d("Authentication", result.value.toString())
 					SlackCloneApp.currentUser = result.value
 					loadRooms()
-					fetchUsers()
+					val fetchUsersResult = SlackCloneApp.currentUser.users.wait()
+					
+					when(fetchUsersResult){
+						
+						is Result.Success -> {
+							chatUserAdapter.setList(fetchUsersResult.value)
+							
+						}
+						
+						is Result.Failure -> {
+							Log.d("SlackClone",fetchUsersResult.error.reason)
+						}
+						
+					}
+					
 				}
-				is Result.Failure -> Log.d("Authentication", result.error.toString())
+				is Result.Failure -> {
+					Toast.makeText(this,"Could not connect to ChatKit",Toast.LENGTH_SHORT).show()
+					Log.d("Authentication", result.error.toString())
+				}
 			}
 			
 		} catch (e: Exception) {
@@ -183,7 +209,7 @@ class MainActivity : AppCompatActivity(), RoomsAdapter.RoomClickListener,
 		progressBarChat.visibility = View.VISIBLE
 		SlackCloneApp.currentUser.subscribeToRoom(
 			roomId = room.id,
-			messageLimit = 100 // Optional, 10 by default
+			messageLimit = MESSAGE_LIMIT // Optional, 10 by default
 		) { event ->
 			when (event) {
 				is RoomSubscriptionEvent.NewMessage -> {
@@ -206,35 +232,37 @@ class MainActivity : AppCompatActivity(), RoomsAdapter.RoomClickListener,
 		val messagesResult = SlackCloneApp.currentUser.fetchMessages(
 			room.id,
 			direction = Direction.OLDER_FIRST, // Optional, OLDER_FIRST by default
-			limit = 100 // Optional, 10 by default
+			limit = MESSAGE_LIMIT // Optional, 10 by default
 		).wait()
 		
 		when(messagesResult) {
 			is Result.Success -> {
-				chatAdapter.setList(messagesResult.value)
 				progressBarChat.visibility = View.GONE
+				if (messagesResult.value.isNotEmpty()) {
+					chatAdapter.setList(messagesResult.value)
+					hideError()
+				} else {
+					showError("No chat history found")
+				}
 			}
 			is Result.Failure -> {
 				Log.d("SlackClone",messagesResult.error.reason)
+				showError(messagesResult.error.reason)
 			}
 		}
 		
 	}
 	
-	private fun fetchUsers(){
-		slackCloneAPI.getUsers().enqueue(object: Callback<List<ChatKitUser>> {
-			override fun onFailure(call: Call<List<ChatKitUser>>, t: Throwable) {
-				Log.d("SlackClone",t.message)
-			}
-			
-			override fun onResponse(call: Call<List<ChatKitUser>>, response: Response<List<ChatKitUser>>) {
-				Log.d("SlackClone",response.body().toString())
-				chatUserAdapter.setList(response.body()!!)
-			}
-			
-		})
+	private fun showError(errorMessage:String){
+		message.text = errorMessage
+		message.visibility = View.VISIBLE
+		progressBarChat.visibility = View.GONE
 	}
 	
+	private fun hideError(){
+		message.visibility = View.GONE
+	}
+
 	private fun getProfile(accessToken: String) {
 		authenticationAPIClient.userInfo(accessToken)
 		  .start(object : BaseCallback<UserProfile, AuthenticationException> {
@@ -246,16 +274,14 @@ class MainActivity : AppCompatActivity(), RoomsAdapter.RoomClickListener,
 						override fun onSuccess(profile: UserProfile) {
 							Log.d("SlackClone", "Time to connect to ChatKit")
 							SlackCloneApp.userEmail = profile.email
-							connectChatKit()
-							/*userProfile = profile
-							runOnUiThread { refreshScreenInformation() }*/
+							//connectChatKit()
+							
+							createUser(profile)
+							
 						}
 						
 						override fun onFailure(error: ManagementException) {
-							Log.d("SlackClone", error.message)
-							Log.d("SlackClone", error.code)
-							Log.d("SlackClone", error.localizedMessage)
-							Log.d("SlackClone", error.stackTrace.toString())
+							error.printStackTrace()
 							runOnUiThread { Toast.makeText(this@MainActivity, "User Profile Request Failed",
 								Toast.LENGTH_SHORT).show() }
 						}
@@ -263,12 +289,46 @@ class MainActivity : AppCompatActivity(), RoomsAdapter.RoomClickListener,
 			  }
 			  
 			  override fun onFailure(error: AuthenticationException) {
-					Log.d("SlackClone",error.message!!)
-					Log.d("SlackClone",error.description)
 					error.printStackTrace()
 					runOnUiThread { Toast.makeText(this@MainActivity, "User Info Request Failed", Toast.LENGTH_SHORT).show() }
 			  }
 		  })
+	}
+	
+	private fun createUser(profile: UserProfile) {
+		val jsonObject = JSONObject()
+		jsonObject.put("email",profile.email+"01")
+		jsonObject.put("name",profile.name)
+		jsonObject.put("imageURL",profile.pictureURL)
+		
+		val body = RequestBody.create(
+			MediaType.parse("application/json; charset=utf-8"),
+			jsonObject.toString()
+		)
+		
+		slackCloneAPI.createUser("",body).enqueue(object:Callback<ResponseBody>{
+			override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
+				showError("Could not connect to ChatKit")
+			}
+			
+			override fun onResponse(call: Call<ResponseBody>, response: Response<ResponseBody>) {
+				val res = response.body()!!.string()
+				val jObject = JSONObject(res!!)
+				try {
+					if (jObject.getString("status").equals("400")) {
+						Log.d("SlackClone", "User exists")
+						connectChatKit()
+					} else {
+					}
+				} catch (e:Exception){
+					e.printStackTrace()
+					Log.d("SlackClone","Catch Exception")
+					connectChatKit()
+				}
+				
+			}
+			
+		})
 	}
 	
 	override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -294,13 +354,15 @@ class MainActivity : AppCompatActivity(), RoomsAdapter.RoomClickListener,
 		finish()
 	}
 	
-	override fun onUserClicked(user: ChatKitUser) {
+	override fun onUserClicked(user: User) {
 		
 		val privateRoomName = if (user.hashCode()>SlackCloneApp.currentUser.hashCode()){
 			user.id+"_"+SlackCloneApp.currentUser.id
 		} else {
 			SlackCloneApp.currentUser.id+"_"+user.id
 		}
+		
+		Log.d("SlackCloneUserClicked",privateRoomName)
 		
 		val memberList = ArrayList<String>()
 		memberList.add(user.id)
@@ -310,13 +372,13 @@ class MainActivity : AppCompatActivity(), RoomsAdapter.RoomClickListener,
 		when(createRoomResult){
 			
 			is Result.Success -> {
-				Log.d("SlackClone",createRoomResult.value.name)
+				Log.d("SlackCloneUserClicked",createRoomResult.value.name)
 				chatAdapter.clear()
 				subscribeToRoom(createRoomResult.value)
 				fetchMessages(createRoomResult.value)
 			}
 			is Result.Failure -> {
-				Log.d("SlackClone",createRoomResult.error.reason)
+				Log.d("SlackCloneUserClicked",createRoomResult.error.reason)
 			}
 		
 		}

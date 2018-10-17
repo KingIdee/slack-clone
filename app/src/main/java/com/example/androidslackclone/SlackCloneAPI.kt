@@ -1,5 +1,7 @@
 package com.example.androidslackclone
 
+import okhttp3.RequestBody
+import okhttp3.ResponseBody
 import org.json.JSONObject
 import retrofit2.Call
 import retrofit2.http.Body
@@ -15,9 +17,6 @@ interface SlackCloneAPI {
 
 	@POST("/slack-clone/user")
 	fun createUser(@Header("Authorization") authorization: String,
-								 @Body body:JSONObject): Call<String>
-	
-	@GET("/slack-clone/users")
-	fun getUsers(): Call<List<ChatKitUser>>
+								 @Body body:RequestBody): Call<ResponseBody>
 	
 }

@@ -19,13 +19,29 @@
       android:layout_gravity="start"
       android:fitsSystemWindows="true" >
 
+    <android.support.v4.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:fillViewport="true"
+        android:layout_height="match_parent">
+
+
     <LinearLayout
         android:orientation="vertical"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="wrap_content">
+
+      <TextView
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:text="Rooms"
+          android:textStyle="bold"
+          android:layout_marginTop="56dp"
+
+          />
 
       <android.support.v7.widget.RecyclerView
-          android:layout_marginTop="56dp"
+
+          android:layout_marginTop="10dp"
           android:layout_width="wrap_content"
           android:id="@+id/recyclerViewRooms"
           android:layout_height="wrap_content"/>
@@ -34,14 +50,23 @@
       horizontal line here
       -->
 
+      <TextView
+          android:layout_marginTop="20dp"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:text="Users"
+          android:textStyle="bold"
+          />
+
       <android.support.v7.widget.RecyclerView
-          android:layout_marginTop="56dp"
+          android:layout_marginTop="10dp"
           android:layout_width="wrap_content"
           android:id="@+id/recyclerViewMembers"
           android:layout_height="wrap_content"/>
 
     </LinearLayout>
 
+    </android.support.v4.widget.NestedScrollView>
 
 
   </android.support.design.widget.NavigationView>
