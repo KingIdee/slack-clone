@@ -34,9 +34,9 @@
           android:layout_width="wrap_content"
           android:layout_height="wrap_content"
           android:text="Rooms"
+          android:layout_marginLeft="10dp"
           android:textStyle="bold"
           android:layout_marginTop="56dp"
-
           />
 
       <android.support.v7.widget.RecyclerView
@@ -46,15 +46,12 @@
           android:id="@+id/recyclerViewRooms"
           android:layout_height="wrap_content"/>
 
-      <!--
-      horizontal line here
-      -->
-
       <TextView
           android:layout_marginTop="20dp"
           android:layout_width="wrap_content"
           android:layout_height="wrap_content"
           android:text="Users"
+          android:layout_marginLeft="10dp"
           android:textStyle="bold"
           />
 

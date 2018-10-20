@@ -32,6 +32,11 @@ class ChatUserAdapter (val listener:UserClickedListener ): RecyclerView.Adapter<
 		notifyDataSetChanged()
 	}
 	
+	fun addItem(item:User){
+		chatUserList.add(item)
+		notifyDataSetChanged()
+	}
+	
 	inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
 		
 		private val userName: TextView = itemView.findViewById(android.R.id.text1)
