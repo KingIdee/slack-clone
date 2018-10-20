@@ -1,13 +1,16 @@
 package com.example.androidslackclone
 
+import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import android.support.v7.app.ActionBarDrawerToggle
 import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.LinearLayoutManager
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 import com.auth0.android.Auth0
 import com.auth0.android.authentication.AuthenticationAPIClient
@@ -16,7 +19,6 @@ import com.auth0.android.callback.BaseCallback
 import com.auth0.android.management.ManagementException
 import com.auth0.android.management.UsersAPIClient
 import com.auth0.android.result.UserProfile
-import com.pusher.chatkit.ChatManagerEvent
 import com.pusher.chatkit.CurrentUser
 import com.pusher.chatkit.messages.Direction
 import com.pusher.chatkit.rooms.Room
@@ -40,10 +42,8 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.converter.scalars.ScalarsConverterFactory
 
-
 class MainActivity : AppCompatActivity(), RoomsAdapter.RoomClickListener,
 	ChatUserAdapter.UserClickedListener {
-	
 	
 	private lateinit var authenticationAPIClient: AuthenticationAPIClient
 	lateinit var usersClient: UsersAPIClient
@@ -54,7 +54,7 @@ class MainActivity : AppCompatActivity(), RoomsAdapter.RoomClickListener,
 	
 	private val slackCloneAPI:SlackCloneAPI by lazy {
 		Retrofit.Builder()
-			.baseUrl("https://wt-25e341bb2fca3ab10c862fb71cda965c-0.sandbox.auth0-extend.com/")
+			.baseUrl(SlackCloneApp.BASE_URL)
 			.addConverterFactory(ScalarsConverterFactory.create())
 			.addConverterFactory(GsonConverterFactory.create())
 			.client(OkHttpClient.Builder().build())
@@ -72,6 +72,16 @@ class MainActivity : AppCompatActivity(), RoomsAdapter.RoomClickListener,
 		setContentView(R.layout.activity_main)
 		setSupportActionBar(toolbar)
 		
+		
+		val toggle = ActionBarDrawerToggle(
+			this,
+			drawer_layout,
+			toolbar,
+			R.string.navigation_drawer_open,
+			R.string.navigation_drawer_close
+		)
+		drawer_layout.addDrawerListener(toggle)
+		toggle.syncState()
 		
 		val accessToken = intent.getStringExtra("access_token")
 		
@@ -101,6 +111,7 @@ class MainActivity : AppCompatActivity(), RoomsAdapter.RoomClickListener,
 						is Result.Success -> {
 							editTextMessage.text.clear()
 							Toast.makeText(this@MainActivity,"Message sent",Toast.LENGTH_SHORT).show()
+							hideKeyboard()
 						}
 						is Result.Failure -> Log.d("SlackClone", sendMessageResult.error.toString())
 					}
@@ -184,7 +195,6 @@ class MainActivity : AppCompatActivity(), RoomsAdapter.RoomClickListener,
 			
 			is Result.Success -> {
 				Log.d("SlackCloneJoinable",joinableRoomsResult.value.toString())
-				//roomsResult.addAll(joinableRoomsResult.value)
 				combinedList.addAll(joinableRoomsResult.value)
 			}
 			
@@ -211,24 +221,8 @@ class MainActivity : AppCompatActivity(), RoomsAdapter.RoomClickListener,
 				}
 			}
 			
-			//mAdapter.setList(roomsResult as ArrayList<Room>)
 		}
-		/*when (roomsResult) {
-			
-			is Result.Success -> {
-				runOnUiThread {
-					Log.d("Tag",roomsResult.value.toString())
-					Log.d("Tag",roomsResult.value.size.toString())
-					mAdapter.setList(roomsResult.value as ArrayList<Room>)
-				}
-				
-			}
-			
-			is Result.Failure -> {
-			
-			}
-			
-		}*/
+	
 	}
 	
 	private fun joinRoom(room: Room) {
@@ -261,7 +255,7 @@ class MainActivity : AppCompatActivity(), RoomsAdapter.RoomClickListener,
 				is RoomSubscriptionEvent.NewMessage -> {
 					progressBarChat.visibility = View.GONE
 					chatAdapter.addItem(event.message)
-					
+					hideError()
 					Log.d("SlackClone", event.message.text)
 				}
 				is RoomSubscriptionEvent.ErrorOccurred -> {
@@ -390,7 +384,10 @@ class MainActivity : AppCompatActivity(), RoomsAdapter.RoomClickListener,
 		// automatically handle clicks on the Home/Up button, so long
 		// as you specify a parent activity in AndroidManifest.xml.
 		return when (item.itemId) {
-			R.id.action_settings -> true
+			R.id.action_logout -> {
+				logout()
+				true
+			}
 			else -> super.onOptionsItemSelected(item)
 		}
 	}
@@ -400,6 +397,15 @@ class MainActivity : AppCompatActivity(), RoomsAdapter.RoomClickListener,
 		intent.putExtra("clear_credentials", true)
 		startActivity(intent)
 		finish()
+	}
+	
+	fun hideKeyboard() {
+    val inputMethodManager = (getSystemService(Activity.INPUT_METHOD_SERVICE)) as InputMethodManager
+    var view = currentFocus
+    if (view == null) {
+        view =  View(this)
+		}
+		inputMethodManager.hideSoftInputFromWindow(view.windowToken, 0)
 	}
 	
 	override fun onUserClicked(user: User) {
@@ -430,7 +436,6 @@ class MainActivity : AppCompatActivity(), RoomsAdapter.RoomClickListener,
 		} else {
 			
 			val createRoomResult = SlackCloneApp.currentUser.createRoom(privateRoomName,true,memberList).wait()
-			
 			when(createRoomResult){
 				
 				is Result.Success -> {

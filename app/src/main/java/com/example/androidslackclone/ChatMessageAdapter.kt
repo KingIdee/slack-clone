@@ -47,7 +47,6 @@ class ChatMessageAdapter : RecyclerView.Adapter<ChatMessageAdapter.ViewHolder>()
 		private val userMessage: TextView = itemView.findViewById(R.id.userMessage)
 		
 		fun bind(item: Message) = with(itemView) {
-			Log.d("SlackClone","bind method called")
 			userName.text = item.user!!.name
 			userMessage.text = item.text
 		}
