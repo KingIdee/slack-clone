@@ -26,11 +26,10 @@ app.post('/token', function (req, res) {
 // Create new user in ChatKit
 app.post('/user', (req, res) => {
 
-  var imageURL = req.body.imageURL;
-
   chatkit.createUser({
   id: req.body.email,
-  name: req.body.name
+  name: req.body.name,
+  avatarURL: req.body.imageURL
   }).then(r => {
     res.send(r);
   }).catch((err) => {
