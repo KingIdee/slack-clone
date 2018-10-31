@@ -20,6 +20,6 @@ interface SlackCloneAPI {
 								 @Body body:RequestBody): Call<ResponseBody>
 	
 	@GET("/slack-clone/users")
-	fun getUsers(): Call<List<User>>
+	fun getUsers(@Header("Authorization") authorization: String): Call<List<User>>
 	
 }

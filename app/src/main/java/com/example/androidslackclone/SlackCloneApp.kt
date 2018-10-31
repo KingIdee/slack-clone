@@ -1,6 +1,8 @@
 package com.example.androidslackclone
 
 import android.app.Application
+import android.util.Log
+import com.auth0.android.jwt.JWT
 import com.pusher.chatkit.AndroidChatkitDependencies
 import com.pusher.chatkit.ChatManager
 import com.pusher.chatkit.ChatkitTokenProvider
@@ -29,5 +31,4 @@ class SlackCloneApp : Application() {
 			)
 		}
 	}
-	
 }

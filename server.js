@@ -2,6 +2,8 @@ var express = require('express');
 var Webtask = require('webtask-tools');
 var bodyParser = require('body-parser');
 const Chatkit = require('@pusher/chatkit-server');
+const jwt = require('express-jwt');
+const jwksRsa = require('jwks-rsa');
 
 const chatkit = new Chatkit.default({
     instanceLocator: "CHATKIT_INSTANCE_LOCATOR",
@@ -11,6 +13,19 @@ const chatkit = new Chatkit.default({
 var app = express();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
+
+const jwtCheck = jwt({
+  secret: jwksRsa.expressJwtSecret({
+    cache: true,
+    rateLimit: true,
+    jwksUri: `https://idee.auth0.com/.well-known/jwks.json`
+  }),
+
+  // Validate the audience and the issuer.
+  aud: 'https://slack-clone/',
+  issuer: `https://idee.auth0.com/`,
+  algorithms: ['RS256']
+});
 
 // Get access token from ChatKit
 app.post('/token', function (req, res) {
@@ -24,12 +39,13 @@ app.post('/token', function (req, res) {
 
 
 // Create new user in ChatKit
-app.post('/user', (req, res) => {
+app.post('/user', jwtCheck, (req, res) => {
+
+  var imageURL = req.body.imageURL;
 
   chatkit.createUser({
   id: req.body.email,
-  name: req.body.name,
-  avatarURL: req.body.imageURL
+  name: req.body.name
   }).then(r => {
     res.send(r);
   }).catch((err) => {
@@ -39,7 +55,7 @@ app.post('/user', (req, res) => {
 });
 
 // Fetch all users in ChatKit instance
-app.get('/users', (req, res) => {
+app.get('/users', jwtCheck, (req, res) => {
 
   chatkit.getUsers()
   .then((r) => {

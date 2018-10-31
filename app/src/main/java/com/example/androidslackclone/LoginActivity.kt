@@ -17,6 +17,8 @@ import com.auth0.android.provider.WebAuthProvider
 import com.auth0.android.result.Credentials
 import com.auth0.android.authentication.storage.CredentialsManagerException
 import com.auth0.android.callback.BaseCallback
+import com.auth0.android.jwt.JWT
+import com.auth0.android.provider.ResponseType
 
 
 class LoginActivity : AppCompatActivity() {
@@ -57,12 +59,12 @@ class LoginActivity : AppCompatActivity() {
 			credentialsManager.clearCredentials()
 		}
 		
-		
 		if (!credentialsManager.hasValidCredentials()) {
 			//Make user login
 			WebAuthProvider.init(auth0)
 					.withScheme("demo")
-					.withAudience(String.format("https://%s/api/v2/", getString(R.string.com_auth0_domain)))
+					//.withAudience(String.format("https://%s/api/v2/", getString(R.string.com_auth0_domain)))
+					.withAudience("https://slack-clone/")
 					.withScope("openid profile email offline_access read:current_user update:current_user_metadata")
 					.start(this, webCallback)
 		} else {
@@ -74,7 +76,8 @@ class LoginActivity : AppCompatActivity() {
 				override fun onFailure(error: CredentialsManagerException) {
 					//Authentication cancelled by the user. Exit the app
 					finish()
-				}
+
+                }
 			})
 		}
 		
